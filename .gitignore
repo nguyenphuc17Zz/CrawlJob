@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Python virtual environments & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Compiled binaries & backups
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+
+# Local runtime SQLite databases, secrets & screenshots
+backend/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Environment & OS files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+*.log
