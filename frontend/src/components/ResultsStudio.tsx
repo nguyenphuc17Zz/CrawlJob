@@ -622,6 +622,7 @@ export const ResultsStudio: React.FC<Props> = ({
   };
 
   const jdBodyScrollRef = useRef<HTMLDivElement | null>(null);
+  const latestSplitRequestIdRef = useRef<number>(0);
 
   const markJobViewed = (jobId: number) => {
     setActiveJdId(jobId);
@@ -633,8 +634,13 @@ export const ResultsStudio: React.FC<Props> = ({
     });
   };
 
-  const loadSplitJobDetail = async (job: JobItem) => {
-    markJobViewed(job.id);
+  const loadSplitJobDetail = async (job: JobItem, isAutoInit: boolean = false) => {
+    const reqId = ++latestSplitRequestIdRef.current;
+    if (isAutoInit) {
+      setActiveJdId(job.id);
+    } else {
+      markJobViewed(job.id);
+    }
     setSplitJobDetail(job);
     setLoadingSplitJob(true);
     if (jdBodyScrollRef.current) {
@@ -642,13 +648,16 @@ export const ResultsStudio: React.FC<Props> = ({
     }
     try {
       const res = await apiRequest(`/api/jobs/${job.id}`);
+      if (latestSplitRequestIdRef.current !== reqId) return;
       if (res?.job) {
         setSplitJobDetail(res.job);
       }
     } catch {
       // keep base job item
     } finally {
-      setLoadingSplitJob(false);
+      if (latestSplitRequestIdRef.current === reqId) {
+        setLoadingSplitJob(false);
+      }
     }
   };
 
@@ -676,19 +685,20 @@ export const ResultsStudio: React.FC<Props> = ({
     setTimeout(() => setCopiedContact(null), 1800);
   };
 
-  // Auto-select first job in Split-View when list changes
+  // Auto-select first job in Split-View when filtered sheet list changes
   useEffect(() => {
     if (!splitView || viewMode !== "table") return;
-    if (paginatedJobs.length === 0) {
+    if (filteredSheetJobs.length === 0) {
       setSplitJobDetail(null);
+      setActiveJdId(null);
       return;
     }
     const stillInList =
-      splitJobDetail && paginatedJobs.some((j) => j.id === splitJobDetail.id);
+      activeJdId !== null && filteredSheetJobs.some((j) => j.id === activeJdId);
     if (!stillInList) {
-      loadSplitJobDetail(paginatedJobs[0]);
+      loadSplitJobDetail(filteredSheetJobs[0], true);
     }
-  }, [splitView, viewMode, paginatedJobs]);
+  }, [splitView, viewMode, filteredSheetJobs]);
 
   const renderTierBadge = (job: JobItem) => {
     const tier = job.quality_tier || "B-Tier";
@@ -1838,8 +1848,7 @@ export const ResultsStudio: React.FC<Props> = ({
                         !/thỏa thuận|thương lượng|cạnh tranh|negotiable/i.test(
                           job.salary_raw
                         ));
-                    const isActiveJd =
-                      activeJdId === job.id || (splitView && splitJobDetail?.id === job.id);
+                    const isActiveJd = activeJdId === job.id;
                     const isViewedJd = !isActiveJd && viewedJobIds.has(job.id);
 
                     return (
